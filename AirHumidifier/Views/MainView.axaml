@@ -1,0 +1,382 @@
+<UserControl
+    x:Class="AirHumidifier.Views.MainView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:AirHumidifier.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:AirHumidifier.ViewModels"
+    d:DesignHeight="783"
+    d:DesignWidth="393"
+    x:DataType="vm:MainViewModel"
+    Background="#800080"
+    BorderThickness="5"
+    CornerRadius="8"
+    FontFamily="{StaticResource Silkscreen}"
+    mc:Ignorable="d">
+    <!--  #800080  -->
+
+    <UserControl.Resources>
+        <conv:StringDoubleToInt x:Key="StringDoubleToInt" />
+    </UserControl.Resources>
+
+    <Design.DataContext>
+        <!--
+            This only sets the DataContext for the previewer in an IDE,
+            to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs)
+        -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <StackPanel>
+            <!--  Top menu  -->
+            <Border
+                Margin="-5,-5,-5,6"
+                Background="#4c0c54"
+                BorderThickness="5"
+                CornerRadius="8">
+                <Grid
+                    Background="#4c0c54"
+                    ColumnDefinitions="Auto, *, Auto"
+                    ShowGridLines="False">
+                    <Rectangle
+                        Grid.Column="0"
+                        Width="40"
+                        Height="40"
+                        Fill="#4c0c54" />
+                    <StackPanel
+                        Grid.Column="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                        <!--  Nunito, Silkscreen, Workbench  -->
+                        <TextBlock FontSize="25" TextWrapping="Wrap">
+                            HUMIDIFIER CONFIGURATOR
+                        </TextBlock>
+                    </StackPanel>
+                    <Button
+                        Grid.Column="2"
+                        Width="40"
+                        Height="50"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Background="#4c0c54"
+                        BorderThickness="0"
+                        Command="{Binding FindDevicesCommand}"
+                        Content="ᛒ"
+                        FontSize="24"
+                        Foreground="LightBlue"
+                        IsEnabled="{Binding !IsConnecting}">
+                        <Button.Flyout>
+                            <Flyout Placement="LeftEdgeAlignedTop" ShowMode="Standard">
+                                <Panel Height="400" MinWidth="162">
+                                    <ListBox
+                                        HorizontalAlignment="Center"
+                                        Background="#800080"
+                                        FontFamily="{StaticResource Silkscreen}"
+                                        ItemsSource="{Binding BluetoothDeviceBasicPropertiesCollection}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button
+                                                    HorizontalAlignment="Center"
+                                                    Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).ConnectToDeviceCommand}"
+                                                    CommandParameter="{Binding Address}">
+                                                    <StackPanel>
+                                                        <TextBlock FontSize="15" Text="{Binding Name}" />
+                                                        <TextBlock FontSize="10" Text="{Binding Address}" />
+                                                        <TextBlock
+                                                            FontSize="10"
+                                                            IsVisible="{Binding ConnectionStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                            Text="{Binding ConnectionStatus}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Panel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!--<Separator Height="4" Margin="-2,4,-2,4" />-->
+
+            <!--  Realtime humidity and temperature menu  -->
+            <Grid Margin="4,0,4,4" ColumnDefinitions="*, *">
+                <Border
+                    Grid.Column="0"
+                    Height="80"
+                    Margin="0,0,4,0"
+                    Background="#4c0c54"
+                    BorderBrush="#4c0c54"
+                    BorderThickness="3"
+                    CornerRadius="8">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="19"
+                            Text="Humidity" />
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                            <TextBlock
+                                Padding="15,0,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="19"
+                                Text="{Binding CurrentHumidity}" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="19"
+                                Text="%" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="1"
+                    Height="80"
+                    Margin="4,0,0,0"
+                    Background="#4c0c54"
+                    BorderBrush="#4c0c54"
+                    BorderThickness="3"
+                    CornerRadius="8">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="19"
+                            Text="Temperature" />
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                            <TextBlock
+                                Padding="19,0,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="19"
+                                Text="{Binding CurrentTemperature}" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="19"
+                                Text="°C" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!--  Main menu  -->
+            <Grid
+                Margin="4"
+                RowDefinitions="Auto, Auto, Auto, Auto"
+                ShowGridLines="false">
+                <!--  Humidity level  -->
+                <Border
+                    Grid.Row="0"
+                    BorderBrush="#4c0c54"
+                    BorderThickness="3"
+                    CornerRadius="8">
+                    <Grid
+                        Margin="0"
+                        Background="#4c0c54"
+                        RowDefinitions="Auto, Auto, Auto, *">
+                        <Rectangle Grid.Row="0" Height="10" />
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto">
+                            <TextBlock
+                                Grid.Column="0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                FontSize="19"
+                                Text="Humidity level:" />
+                            <TextBox
+                                Grid.Column="1"
+                                MinWidth="57"
+                                MinHeight="1"
+                                Padding="0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Focusable="True"
+                                FontSize="19"
+                                GotFocus="TextInput_GotFocus"
+                                MaxLength="3"
+                                Text="{Binding UserHumidityLevel}"
+                                TextAlignment="Center"
+                                TextInputOptions.ContentType="Number"
+                                TextWrapping="NoWrap" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                FontSize="19"
+                                Text="%" />
+                        </Grid>
+                        <Slider
+                            Grid.Row="2"
+                            Maximum="100"
+                            Value="{Binding UserHumidityLevel}" />
+                    </Grid>
+                </Border>
+                <!--  Dynamic Indacation  -->
+                <Border
+                    Grid.Row="1"
+                    Margin="0,8,0,0"
+                    BorderBrush="#4c0c54"
+                    BorderThickness="3"
+                    CornerRadius="8">
+                    <Grid Background="#4c0c54" RowDefinitions="Auto, Auto, *">
+                        <Rectangle Grid.Row="0" Height="2" />
+                        <TextBlock
+                            Grid.Row="1"
+                            Padding="0,10,0,0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom"
+                            FontSize="19"
+                            Text="Indication speed" />
+                        <Slider
+                            Grid.Row="2"
+                            Maximum="100"
+                            Minimum="0"
+                            Value="{Binding DynamicIndicationSliderViewModel.Value}" />
+                    </Grid>
+                </Border>
+                <!--  Display settings  -->
+                <Border
+                    Grid.Row="2"
+                    Margin="0,8,0,0"
+                    BorderBrush="#4c0c54"
+                    BorderThickness="3"
+                    CornerRadius="8">
+                    <StackPanel AreVerticalSnapPointsRegular="True" Background="#4c0c54">
+                        <TextBlock Padding="0,10,0,0" FontSize="19">Display settings</TextBlock>
+                        <Grid
+                            ColumnDefinitions="Auto, Auto, *, Auto"
+                            RowDefinitions="Auto, Auto, Auto, Auto, Auto"
+                            ShowGridLines="false">
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Margin="0,8,0,0"
+                                FontSize="19">
+                                Name
+                            </TextBlock>
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Margin="12,8,0,0"
+                                FontSize="19">
+                                State
+                            </TextBlock>
+                            <Rectangle Grid.Row="0" Grid.Column="2" />
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="3"
+                                Margin="8"
+                                FontSize="19">
+                                Hold time
+                            </TextBlock>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Margin="0,4,0,0"
+                                FontSize="19">
+                                Time
+                            </TextBlock>
+                            <ToggleSwitch
+                                Name="timeSW"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                MinWidth="1"
+                                MaxWidth="40"
+                                Margin="10,0,0,0"
+                                HorizontalAlignment="Center"
+                                IsChecked="{Binding DisplaySettingsViewModel.IsTimeDisplayed}"
+                                OffContent=""
+                                OnContent="" />
+                            <Rectangle Grid.Row="1" Grid.Column="2" />
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="4"
+                                Margin="0,0,0,2"
+                                Padding="0,3,0,0"
+                                HorizontalAlignment="Center"
+                                Focusable="True"
+                                FontSize="18"
+                                GotFocus="TextInput_GotFocus"
+                                IsEnabled="{Binding #timeSW.IsChecked}"
+                                MaxLength="4"
+                                Text="{Binding DisplaySettingsViewModel.TimeDisplayTime}"
+                                TextAlignment="Center"
+                                TextInputOptions.ContentType="Number"
+                                TextWrapping="NoWrap" />
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Margin="0,4,0,0"
+                                FontSize="19">
+                                Temp
+                            </TextBlock>
+                            <ToggleSwitch
+                                Name="temperatureSW"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                MinWidth="1"
+                                MaxWidth="40"
+                                Margin="10,0,0,0"
+                                HorizontalAlignment="Center"
+                                IsChecked="{Binding DisplaySettingsViewModel.IsTemperatureDisplayed}"
+                                OffContent=""
+                                OnContent="" />
+                            <Rectangle Grid.Row="2" Grid.Column="2" />
+                            <TextBox
+                                Grid.Row="2"
+                                Grid.Column="4"
+                                Margin="2"
+                                Padding="0,3,0,0"
+                                HorizontalAlignment="Center"
+                                Focusable="True"
+                                FontSize="18"
+                                GotFocus="TextInput_GotFocus"
+                                IsEnabled="{Binding #temperatureSW.IsChecked}"
+                                MaxLength="4"
+                                Text="{Binding DisplaySettingsViewModel.TemperatureDisplayTime}"
+                                TextAlignment="Center"
+                                TextInputOptions.ContentType="Number"
+                                TextWrapping="NoWrap" />
+
+                            <TextBlock
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Margin="0,4,0,0"
+                                FontSize="19">
+                                Hum
+                            </TextBlock>
+                            <ToggleSwitch
+                                Name="humiditySW"
+                                Grid.Row="3"
+                                Grid.Column="1"
+                                MinWidth="1"
+                                MaxWidth="40"
+                                Margin="10,0,0,0"
+                                HorizontalAlignment="Center"
+                                IsChecked="{Binding DisplaySettingsViewModel.IsHumidityDisplayed}"
+                                OffContent=""
+                                OnContent="" />
+                            <Rectangle Grid.Row="3" Grid.Column="2" />
+                            <TextBox
+                                Grid.Row="3"
+                                Grid.Column="4"
+                                Margin="2"
+                                Padding="0,3,0,0"
+                                HorizontalAlignment="Center"
+                                Focusable="True"
+                                FontSize="18"
+                                GotFocus="TextInput_GotFocus"
+                                IsEnabled="{Binding #humiditySW.IsChecked}"
+                                MaxLength="4"
+                                Text="{Binding DisplaySettingsViewModel.HumidityDisplayTime}"
+                                TextAlignment="Center"
+                                TextInputOptions.ContentType="Number"
+                                TextWrapping="NoWrap" />
+                            <Rectangle Grid.Row="4" Height="10" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>

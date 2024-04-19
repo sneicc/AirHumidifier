@@ -1,0 +1,17 @@
+<Application xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 x:Class="AirHumidifier.App"
+			 RequestedThemeVariant="Dark">
+			 <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+	<Application.Styles>
+		<FluentTheme />
+	</Application.Styles>
+	
+	<Application.Resources>
+		<FontFamily x:Key="Silkscreen">avares://AirHumidifier/Assets/Fonts/SilkscreenF#Silkscreen</FontFamily>
+		<FontFamily x:Key="Nunito">avares://AirHumidifier/Assets/Fonts/Nunito/static#Nunito</FontFamily>
+		<FontFamily x:Key="Workbench">avares://AirHumidifier/Assets/Fonts/Workbench#Workbench</FontFamily>		
+	</Application.Resources>
+	
+</Application>

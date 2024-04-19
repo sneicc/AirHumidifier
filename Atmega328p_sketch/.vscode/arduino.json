@@ -1,0 +1,5 @@
+{
+    "board": "atmel-avr-xminis:avr:atmega328p_xplained_mini",
+    "programmer": "medbg",
+    "sketch": "sketch_mar15a.ino"
+}
