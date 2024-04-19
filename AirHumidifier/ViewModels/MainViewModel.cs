@@ -10,10 +10,13 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Text;
 using System.Threading.Tasks;
 public class MainViewModel : ViewModelBase
 {
     private bool _isIndicatorSlaiderWaitBeforeNextSend;
+
+    private StringBuilder _messageBuffer;
 
     private BluetoothDeviceBasicProperties _connectedDevice;
     private IBluetoothService _bluetoothService;
@@ -27,13 +30,15 @@ public class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         _bluetoothService = RegisteredServices.BluetoothService;
-        
+
         FindDevicesCommand = ReactiveCommand.Create(FindBluetoothDevices);
         ConnectToDeviceCommand = ReactiveCommand.CreateFromTask<string>(ConnectToBluetoothDevice);
         DynamicIndicationSliderViewModel = new DynamicIndicationSliderViewModel(0, MaxMicrosecondsDelay);
         DisplaySettingsViewModel = new DisplaySettingsViewModel(true, true, true); // change to load from save file or get from bluetooth request
 
         _bluetoothDeviceBasicPropertiesCollection = new ObservableCollection<BluetoothDeviceBasicProperties>();
+
+        _messageBuffer = new StringBuilder();
     }
 
 
@@ -44,6 +49,7 @@ public class MainViewModel : ViewModelBase
     public void RuntimeInit()
     {
         _bluetoothService.DeviceFounded += OnBluetoothDeviceFounded;
+        _bluetoothService.ReceiveMessage += OnReceiveMessage;
 
         this.WhenAnyValue(x => x.DynamicIndicationSliderViewModel.DynamicIndicationDelay)
             .Subscribe(OnDynamicIndicationDelayChanged);
@@ -93,7 +99,8 @@ public class MainViewModel : ViewModelBase
         get { return _currentHumidity.ToString(); }
         private set
         {
-            throw new NotImplementedException();
+            if (!uint.TryParse(value, out uint parsedValue)) return;
+            this.RaiseAndSetIfChanged(ref _currentHumidity, parsedValue);
         }
     }
 
@@ -104,15 +111,16 @@ public class MainViewModel : ViewModelBase
         get { return _currentTemperature.ToString(); }
         private set
         {
-            throw new NotImplementedException();
+            if (!uint.TryParse(value, out uint parsedValue)) return;
+            this.RaiseAndSetIfChanged(ref _currentTemperature, parsedValue);
         }
     }
 
 
-    private async void ChangeSetHumidity(uint humidity) 
+    private async void ChangeSetHumidity(uint humidity)
     {
         string command = CommandGenerator.CreateChangeSetHumidityCommand(humidity);
-        bool result = await _bluetoothService.SendDataAsync(command);
+        bool result = await _bluetoothService.SendMessageAsync(command);
 
 #if DEBUG
         Console.WriteLine("Sended value:" + humidity);
@@ -157,7 +165,7 @@ public class MainViewModel : ViewModelBase
     private async Task<bool> ChangeDisplayTime(char type, string time)
     {
         string command = CommandGenerator.CreateDisplayTimeChangeCommand(type, time);
-        return await _bluetoothService.SendDataAsync(command);       
+        return await _bluetoothService.SendMessageAsync(command);
     }
 
 
@@ -167,7 +175,7 @@ public class MainViewModel : ViewModelBase
 
         _isIndicatorSlaiderWaitBeforeNextSend = true;
 
-        bool result = await _bluetoothService.SendDataAsync(CommandGenerator.CreateSetIndicationDelayCommand(dynamicIndicationDelay));
+        bool result = await _bluetoothService.SendMessageAsync(CommandGenerator.CreateSetIndicationDelayCommand(dynamicIndicationDelay));
         await Task.Delay(200);
 
         _isIndicatorSlaiderWaitBeforeNextSend = false;
@@ -182,7 +190,7 @@ public class MainViewModel : ViewModelBase
     private async void OnDisplayedElementChanged((bool isTimeDisplayed, bool isTemperatureDisplayed, bool isHumidityDisplayed) elements)
     {
         string command = CommandGenerator.CreateChangeDisplayedInformationCommand(elements.isTimeDisplayed, elements.isTemperatureDisplayed, elements.isHumidityDisplayed);
-        bool result = await _bluetoothService.SendDataAsync(command);
+        bool result = await _bluetoothService.SendMessageAsync(command);
 
 #if DEBUG
         Console.WriteLine($"Send to display: {elements.isTimeDisplayed} {elements.isTemperatureDisplayed} {elements.isHumidityDisplayed}");
@@ -205,6 +213,54 @@ public class MainViewModel : ViewModelBase
     }
 
 
+    private void OnReceiveMessage(string message)
+    {
+        if (message == null || message == string.Empty) return;
+      
+        while (true) 
+        {
+            int separatorIndex = message.IndexOf('\n');
+            if (separatorIndex == -1)
+            {
+                _messageBuffer.Append(message);
+                return;
+            }
+            else
+            {
+                _messageBuffer.Append(message[..separatorIndex]);
+                HandleMessage(_messageBuffer.ToString());
+                _messageBuffer.Clear();
+
+                if (separatorIndex < message.Length - 1) message = message[(separatorIndex + 1)..];
+                else return;
+            }
+        }    
+    }
+
+
+    private void HandleMessage(string message)
+    {
+        char messageType = message[0];
+        string data = message[1..];
+
+        switch (messageType)
+        {
+            case 'T':
+                Console.WriteLine("Enter T, msg: " + message);
+                CurrentTemperature = data;
+                break;
+
+            case 'H':
+                Console.WriteLine("Enter H, msg: " + message);
+                CurrentHumidity = data;
+                break;
+            default:
+                Console.WriteLine("Received message: " + message);
+                Console.WriteLine("Unknown command: " + messageType);
+                break;
+        }
+    }
+
     private async Task ConnectToBluetoothDevice(string mac)
     {
         IsConnecting = true;
@@ -213,6 +269,7 @@ public class MainViewModel : ViewModelBase
         BluetoothDeviceBasicProperties properties = BluetoothDeviceBasicPropertiesCollection.FirstOrDefault(p => (p.Address == mac));       
         if (result)
         {
+            _bluetoothService.StartListenForMessage();
             properties.ConnectionStatus = "Connected";
         }
         else

@@ -9,6 +9,8 @@ using Java.Util;
 using Console = System.Console;
 using Encoding = System.Text.Encoding;
 using AirHumidifier.DataModels;
+using Java.Lang;
+using Exception = System.Exception;
 
 namespace AirHumidifier.AndroidApp
 {
@@ -16,6 +18,7 @@ namespace AirHumidifier.AndroidApp
     {
         public event Action<BluetoothDeviceBasicProperties> DeviceFounded;
         public event Action<BluetoothDeviceBasicProperties> DeviceDisconnected;
+        public event Action<string> ReceiveMessage;
 
         private BluetoothAdapter _bluetoothAdapter;
         private List<BluetoothDevice> _foundDevices;
@@ -55,22 +58,15 @@ namespace AirHumidifier.AndroidApp
             }
 
             _connectedDevice = device;
-            // temp test--
-            //string message = "1";
-            //uint messageLength = (uint)message.Length;
-            //byte[] countBuffer = BitConverter.GetBytes(messageLength);
-            //byte[] buffer = Encoding.UTF8.GetBytes(message);
-
-            //await _socket.OutputStream.WriteAsync(countBuffer, 0, countBuffer.Length);
-            //await _socket.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-            //------------
 
             return true;
         }
 
-        public bool Disconnect()
+        public void Disconnect()
         {
-            throw new NotImplementedException();
+            _connectedDevice = null;
+            _socket.Close();
+            _socket.Dispose();
         }
 
         public void FindDevices()
@@ -88,12 +84,28 @@ namespace AirHumidifier.AndroidApp
             _bluetoothAdapter.StartDiscovery();
         }
 
-        public async Task<string> GetDataAsync()
+        public async void StartListenForMessage()
         {
-            throw new NotImplementedException();
+            var textBuffer = new byte[1024];
+
+            while(true)
+            {
+                try
+                {
+                    int bytesReaded = await _socket.InputStream.ReadAsync(textBuffer, 0, textBuffer.Length);
+                    string message = Encoding.ASCII.GetString(textBuffer, 0, bytesReaded);
+                    ReceiveMessage?.Invoke(message);             
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Stop listen for message!");
+                    Console.WriteLine("Error: " + e.Message);
+                    break;
+                }
+            }           
         }
 
-        public async Task<bool> SendDataAsync(string message)
+        public async Task<bool> SendMessageAsync(string message)
         {
             uint messageLength = (uint)message.Length;
             byte[] countBuffer = BitConverter.GetBytes(messageLength);

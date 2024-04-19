@@ -10,7 +10,7 @@ using AirHumidifier.DataModels;
 
 namespace AirHumidifier.AndroidApp
 {
-    internal class BluetoothServiceBLE : IBluetoothService // not used
+    internal class BluetoothServiceBLE //: IBluetoothService // not used
     {
         private IBluetoothLE _ble;
         private IAdapter _adapter;
@@ -86,7 +86,7 @@ namespace AirHumidifier.AndroidApp
             throw new NotImplementedException();
         }
 
-        public Task<bool> SendDataAsync(string message)
+        public Task<bool> SendMessageAsync(string message)
         {
             throw new NotImplementedException();
         }

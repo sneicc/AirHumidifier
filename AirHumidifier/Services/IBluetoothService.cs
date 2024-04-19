@@ -7,15 +7,16 @@ namespace AirHumidifier.Services
     public interface IBluetoothService
     {
         public event Action<BluetoothDeviceBasicProperties> DeviceFounded;
+        public event Action<string> ReceiveMessage;
 
         public Task<bool> ConnectAsync(string mac);
 
         public void FindDevices();
 
-        public bool Disconnect();
+        public void Disconnect();
 
-        public Task<string> GetDataAsync();
+        public void StartListenForMessage();
 
-        public Task<bool> SendDataAsync(string message);
+        public Task<bool> SendMessageAsync(string message);
     }
 }

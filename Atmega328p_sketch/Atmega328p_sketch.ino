@@ -70,6 +70,10 @@ bool isHumidityActive = true;
 unsigned int SetHumidityLevel = 0;
 static const int HUMIDIFIER_PIN = 6;
 
+float temperature = 0;
+float humidity = 0;
+bool isNeedSendMeasurments = false;
+
 void setup() {
   //настраиваем контакты на выход
   pinMode(CLOCK, OUTPUT);
@@ -164,8 +168,8 @@ void ReadSerial()
       mode = ReceivedMode;
     }
     else
-    {
-      InputString += input;     
+    {      
+      InputString += input;    
     }  
   }
 }
@@ -236,11 +240,16 @@ void loop() {
     Hour = now.hour;
     Minute = now.minute;
   }
+
+  if(isNeedSendMeasurments)
+  {
+    Serial.print('T' + String((int)temperature) + '\n');
+    Serial.print('H'+ String((int)humidity) + '\n');
+  }
   
-  float temperature;
-  float humidity;
   bool isMeasured = MeasureEnvironment(&temperature, &humidity);
   isNeedUpdateTime = isMeasured;
+  isNeedSendMeasurments = isMeasured;
 
   if((int)humidity < SetHumidityLevel) digitalWrite(HUMIDIFIER_PIN, HIGH);
   else digitalWrite(HUMIDIFIER_PIN, LOW);
@@ -307,6 +316,7 @@ void loop() {
       break;
 
     case 5:
+    {
       mode = prevMode;
 
       char type = InputString[0];
@@ -339,16 +349,15 @@ void loop() {
           HumidityShowTime = ReceivedValue;
           break;
       }
+    }
+    break;
       
     case 6:
       mode = prevMode;
-
       ReceivedValue = InputString.toInt();
       SetHumidityLevel = ReceivedValue;
       break;
-     
   }
-
 
   CurrentTime = micros();
   if (CurrentTime > next_flick) {
