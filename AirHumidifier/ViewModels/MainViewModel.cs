@@ -11,9 +11,6 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using System.Windows.Markup;
-using System.Xml.Linq;
-
 public class MainViewModel : ViewModelBase
 {
     private bool _isIndicatorSlaiderWaitBeforeNextSend;
@@ -39,6 +36,7 @@ public class MainViewModel : ViewModelBase
         _bluetoothDeviceBasicPropertiesCollection = new ObservableCollection<BluetoothDeviceBasicProperties>();
     }
 
+
     /// <summary>
     /// Must be called after instantiation and passing to DataContext. 
     /// Allows to avoid "Object reference not set to an instance of an object" in the preview
@@ -57,6 +55,69 @@ public class MainViewModel : ViewModelBase
         this.WhenAnyValue(x => x.DisplaySettingsViewModel.TimeDisplayTime).Subscribe(OnTimeDisplayTimeChanged);
         this.WhenAnyValue(x => x.DisplaySettingsViewModel.TemperatureDisplayTime).Subscribe(OnTemperatureDisplayTimeChanged);
         this.WhenAnyValue(x => x.DisplaySettingsViewModel.HumidityDisplayTime).Subscribe(OnHumidityDisplayTimeChanged);
+    }
+
+
+    private bool _isConnecting;
+    public bool IsConnecting
+    {
+        get { return _isConnecting; }
+        private set { this.RaiseAndSetIfChanged(ref _isConnecting, value); }
+    }
+
+
+    private ObservableCollection<BluetoothDeviceBasicProperties> _bluetoothDeviceBasicPropertiesCollection;
+    public ObservableCollection<BluetoothDeviceBasicProperties> BluetoothDeviceBasicPropertiesCollection
+    {
+        get { return _bluetoothDeviceBasicPropertiesCollection; }
+        private set { this.RaiseAndSetIfChanged(ref _bluetoothDeviceBasicPropertiesCollection, value); }
+    }
+
+
+    private int _userHumidityLevel;
+    public string UserHumidityLevel
+    {
+        get { return _userHumidityLevel.ToString(); }
+        set
+        {
+            if (!double.TryParse(value, out double parsedValue)) return;
+            this.RaiseAndSetIfChanged(ref _userHumidityLevel, (int)parsedValue);
+            ChangeSetHumidity((uint)_userHumidityLevel);
+        }
+    }
+
+
+    private uint _currentHumidity;
+    public string CurrentHumidity
+    {
+        get { return _currentHumidity.ToString(); }
+        private set
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+    private uint _currentTemperature;
+    public string CurrentTemperature
+    {
+        get { return _currentTemperature.ToString(); }
+        private set
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+    private async void ChangeSetHumidity(uint humidity) 
+    {
+        string command = CommandGenerator.CreateChangeSetHumidityCommand(humidity);
+        bool result = await _bluetoothService.SendDataAsync(command);
+
+#if DEBUG
+        Console.WriteLine("Sended value:" + humidity);
+        Console.WriteLine("Humidity changed: " + result);
+#endif
     }
 
 
@@ -100,22 +161,6 @@ public class MainViewModel : ViewModelBase
     }
 
 
-    private bool _isConnecting;
-    public bool IsConnecting
-    {
-        get { return _isConnecting; }
-        private set { this.RaiseAndSetIfChanged(ref _isConnecting, value); }
-    }
-
-
-    private ObservableCollection<BluetoothDeviceBasicProperties> _bluetoothDeviceBasicPropertiesCollection;
-    public ObservableCollection<BluetoothDeviceBasicProperties> BluetoothDeviceBasicPropertiesCollection
-    {
-        get { return _bluetoothDeviceBasicPropertiesCollection; }
-        private set { this.RaiseAndSetIfChanged(ref _bluetoothDeviceBasicPropertiesCollection, value); }
-    }
-
-
     private async void OnDynamicIndicationDelayChanged(int dynamicIndicationDelay)
     {
         if (_isIndicatorSlaiderWaitBeforeNextSend) return;
@@ -146,50 +191,19 @@ public class MainViewModel : ViewModelBase
     }
 
 
-    private int _userHumidityLevel;
-    public string UserHumidityLevel
-    {
-        get { return _userHumidityLevel.ToString(); }
-        set
-        {
-            if (!double.TryParse(value, out double parsedValue)) return;
-            this.RaiseAndSetIfChanged(ref _userHumidityLevel, (int)parsedValue);
-        }
-    }
-
-
-    private uint _currentHumidity;
-    public string CurrentHumidity
-    {
-        get { return _currentHumidity.ToString(); }
-        private set 
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-
-    private uint _currentTemperature;
-    public string CurrentTemperature
-    {
-        get { return _currentTemperature.ToString(); }
-        private set
-        {
-            throw new NotImplementedException();
-        }
-    }
-
     private void FindBluetoothDevices()
     {
         BluetoothDeviceBasicPropertiesCollection.Clear();
         _bluetoothService.FindDevices();
     }
 
+
     private void OnBluetoothDeviceFounded(BluetoothDeviceBasicProperties properties)
     {
         BluetoothDeviceBasicPropertiesCollection.Add(properties);
         this.RaisePropertyChanged(nameof(BluetoothDeviceBasicPropertiesCollection));
     }
+
 
     private async Task ConnectToBluetoothDevice(string mac)
     {

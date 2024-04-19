@@ -67,6 +67,9 @@ bool isTimeActive = true;
 bool isTemperatureActive = true;
 bool isHumidityActive = true;
 
+unsigned int SetHumidityLevel = 0;
+static const int HUMIDIFIER_PIN = 6;
+
 void setup() {
   //настраиваем контакты на выход
   pinMode(CLOCK, OUTPUT);
@@ -77,6 +80,7 @@ void setup() {
   pinMode(4, OUTPUT);
   pinMode(5, OUTPUT);
   pinMode(13, OUTPUT);
+  pinMode(HUMIDIFIER_PIN, OUTPUT);
 
   digitalWrite(LATCH, LOW);
 
@@ -237,6 +241,9 @@ void loop() {
   float humidity;
   bool isMeasured = MeasureEnvironment(&temperature, &humidity);
   isNeedUpdateTime = isMeasured;
+
+  if((int)humidity < SetHumidityLevel) digitalWrite(HUMIDIFIER_PIN, HIGH);
+  else digitalWrite(HUMIDIFIER_PIN, LOW);
   
   switch(mode) 
   {
@@ -331,7 +338,15 @@ void loop() {
           if(mode == 2) NextChangeMode += ReceivedValue - HumidityShowTime;
           HumidityShowTime = ReceivedValue;
           break;
-      }     
+      }
+      
+    case 6:
+      mode = prevMode;
+
+      ReceivedValue = InputString.toInt();
+      SetHumidityLevel = ReceivedValue;
+      break;
+     
   }
 
 

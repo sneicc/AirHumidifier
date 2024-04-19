@@ -17,5 +17,10 @@
             time = time == "AUTO" ? "A" : time;
             return $"M5{type}{time}\n";
         }
+
+        internal static string CreateChangeSetHumidityCommand(uint humidity)
+        {
+            return $"M6{humidity}\n";
+        }
     }
 }
