@@ -74,8 +74,8 @@ float temperature = 0;
 float humidity = 0;
 bool isNeedSendMeasurments = false;
 
-void setup() {
-  //настраиваем контакты на выход
+void setup() 
+{
   pinMode(CLOCK, OUTPUT);
   pinMode(DATA, OUTPUT);
   pinMode(LATCH, OUTPUT);
@@ -90,12 +90,6 @@ void setup() {
 
   Serial.begin(9600);
 
-  // проверка наличия модуля на линии i2c
-  //вызов rtc.begin() не обязателен для работы
-  while(!rtc.begin()){
-    Serial.println("DS3231 not found");
-  }
-
   //rtc.setTime(BUILD_SEC, BUILD_MIN, BUILD_HOUR, BUILD_DAY, BUILD_MONTH, BUILD_YEAR);
 }
 
@@ -105,8 +99,10 @@ void DisplayDigit(int digit) {
   digitalWrite(LATCH, HIGH);
 }
 
-void DynamicIndication(byte digit) {
-  switch (digit) {
+void DynamicIndication(byte digit) 
+{
+  switch (digit) 
+  {
     case 0:
       digitalWrite(5, LOW);
       DisplayDigit(Numbers[digit]);
@@ -134,7 +130,6 @@ static bool MeasureEnvironment(float *temperature, float *humidity)
 {
     static unsigned long measurement_timestamp = millis();
 
-    /* Measure once every four seconds. */
     if (millis() - measurement_timestamp > DHTMeasureDelay) 
     {
         if (dht_sensor.measure(temperature, humidity)) 
@@ -228,33 +223,69 @@ void SetEmptyToShow()
   Numbers[3] = EmptySymbol; 
 }
 
-void loop() {
-  //unsigned long startTime = micros();
-  int prevMode = mode;
+void SetNewActiveDisplayElementsFromRecievedCommand()
+{
+  if(InputString.length() != 3) return;
 
-  ReadSerial();
+  if(InputString[0] == '1') isTimeActive = 1;
+  else isTimeActive = 0;
+  if(InputString[1] == '1') isTemperatureActive = 1;
+  else isTemperatureActive = 0;
+  if(InputString[2] == '1') isHumidityActive = 1;
+  else isHumidityActive = 0;
 
-  if(isNeedUpdateTime)
-  { 
-    DateTime now = rtc.getTime();
-    Hour = now.hour;
-    Minute = now.minute;
-  }
+  if(!isTimeActive && !isTemperatureActive && !isHumidityActive) SetEmptyToShow();
+}
 
-  if(isNeedSendMeasurments)
+void SetNewDisplayTimeFromRecievedCommand()
+{
+  char type = InputString[0];
+  bool setDefault = 0;
+  if(InputString[1] == 'A') setDefault = 1;
+  else
   {
-    Serial.print('T' + String((int)temperature) + '\n');
-    Serial.print('H'+ String((int)humidity) + '\n');
+    InputString.remove(0, 1);
+    ReceivedValue = InputString.toInt() * 1000;
   }
-  
-  bool isMeasured = MeasureEnvironment(&temperature, &humidity);
-  isNeedUpdateTime = isMeasured;
-  isNeedSendMeasurments = isMeasured;
 
-  if((int)humidity < SetHumidityLevel) digitalWrite(HUMIDIFIER_PIN, HIGH);
-  else digitalWrite(HUMIDIFIER_PIN, LOW);
-  
-  switch(mode) 
+  switch(type)
+  {
+    case 'T':
+      if(setDefault) ReceivedValue = DefualtTimeShowTime;
+
+      if(mode == 0) NextChangeMode += ReceivedValue - TimeShowTime;
+      TimeShowTime = ReceivedValue;        
+      break;
+    case 'C':
+      if(setDefault) ReceivedValue = DefualtTemperatureShowTime;
+
+      if(mode == 1) NextChangeMode += ReceivedValue - TemperatureShowTime;
+      TemperatureShowTime = ReceivedValue;
+      break;
+    case 'H':
+      if(setDefault) ReceivedValue = DefualtHumidityShowTime;
+
+      if(mode == 2) NextChangeMode += ReceivedValue - HumidityShowTime;
+      HumidityShowTime = ReceivedValue;
+      break;
+  }
+}
+
+void SetNewHumidityLevelFromRecievedCommand()
+{
+  ReceivedValue = InputString.toInt();
+  SetHumidityLevel = ReceivedValue;
+}
+
+void SetNewDynamicIndicationDelayFromRecievedCommand()
+{
+  ReceivedValue = InputString.toInt();
+  to_flick = ReceivedValue;
+}
+
+void ExecuteMode(int curMode, int prevMode, bool isMeasured)
+{
+  switch(curMode) 
   {
     case 0:
       if(!isTimeActive) ChangeMode();
@@ -295,79 +326,59 @@ void loop() {
 
     case 3:
       mode = prevMode;
-
-      ReceivedValue = InputString.toInt();
-      to_flick = ReceivedValue;
+      SetNewDynamicIndicationDelayFromRecievedCommand();
       break;
 
     case 4:
       mode = prevMode;
-
-      if(InputString.length() != 3) return;
-
-      if(InputString[0] == '1') isTimeActive = 1;
-      else isTimeActive = 0;
-      if(InputString[1] == '1') isTemperatureActive = 1;
-      else isTemperatureActive = 0;
-      if(InputString[2] == '1') isHumidityActive = 1;
-      else isHumidityActive = 0;
-
-      if(!isTimeActive && !isTemperatureActive && !isHumidityActive) SetEmptyToShow();
+      SetNewActiveDisplayElementsFromRecievedCommand();
       break;
 
-    case 5:
-    {
+    case 5:  
       mode = prevMode;
-
-      char type = InputString[0];
-      bool setDefault = 0;
-      if(InputString[1] == 'A') setDefault = 1;
-      else
-      {
-        InputString.remove(0, 1);
-        ReceivedValue = InputString.toInt() * 1000;
-      }
-
-      switch(type)
-      {
-        case 'T':
-          if(setDefault) ReceivedValue = DefualtTimeShowTime;
-
-          if(mode == 0) NextChangeMode += ReceivedValue - TimeShowTime;
-          TimeShowTime = ReceivedValue;        
-          break;
-        case 'C':
-          if(setDefault) ReceivedValue = DefualtTemperatureShowTime;
-
-          if(mode == 1) NextChangeMode += ReceivedValue - TemperatureShowTime;
-          TemperatureShowTime = ReceivedValue;
-          break;
-        case 'H':
-          if(setDefault) ReceivedValue = DefualtHumidityShowTime;
-
-          if(mode == 2) NextChangeMode += ReceivedValue - HumidityShowTime;
-          HumidityShowTime = ReceivedValue;
-          break;
-      }
-    }
-    break;
+      SetNewDisplayTimeFromRecievedCommand();   
+      break;
       
     case 6:
       mode = prevMode;
-      ReceivedValue = InputString.toInt();
-      SetHumidityLevel = ReceivedValue;
+      SetNewHumidityLevelFromRecievedCommand();
       break;
   }
+}
 
-  CurrentTime = micros();
-  if (CurrentTime > next_flick) {
-    next_flick = CurrentTime + to_flick;
-    digit++;
-    if (digit == 4)
-      digit = 0;
-    DynamicIndication(digit);
+void loop() {
+  int prevMode = mode;
+
+  ReadSerial();
+
+  if(isNeedUpdateTime)
+  { 
+    DateTime now = rtc.getTime();
+    Hour = now.hour;
+    Minute = now.minute;
   }
 
-  //unsigned long endTime = micros();
-  //Serial.println(endTime - startTime);  
+  if(isNeedSendMeasurments)
+  {
+    Serial.print('T' + String((int)temperature) + '\n');
+    Serial.print('H'+ String((int)humidity) + '\n');
+  }
+  
+  bool isMeasured = MeasureEnvironment(&temperature, &humidity);
+  isNeedUpdateTime = isMeasured;
+  isNeedSendMeasurments = isMeasured;
+
+  if((int)humidity < SetHumidityLevel) digitalWrite(HUMIDIFIER_PIN, HIGH);
+  else digitalWrite(HUMIDIFIER_PIN, LOW);
+  
+  ExecuteMode(mode, prevMode, isMeasured);
+
+  CurrentTime = micros();
+  if (CurrentTime > next_flick) 
+  {
+    next_flick = CurrentTime + to_flick;
+    digit++;
+    if (digit == 4) digit = 0;
+    DynamicIndication(digit);
+  }
 }
