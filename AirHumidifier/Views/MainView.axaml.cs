@@ -1,5 +1,4 @@
-﻿using AirHumidifier.ViewModels;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Threading;
 
 
@@ -26,9 +25,5 @@ public partial class MainView : UserControl
         {
             textBox.SelectAll();
         });
-    }
-
-    private void Flyout_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
-    {
     }
 }

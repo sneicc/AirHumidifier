@@ -53,7 +53,6 @@ byte Hour = 0;
 byte Minute = 0;
 bool isNeedUpdateTime = true;
 
-
 unsigned long DefualtTimeShowTime = 5000;
 unsigned long DefualtHumidityShowTime = 5000;
 unsigned long DefualtTemperatureShowTime = 5000;
@@ -73,6 +72,10 @@ static const int HUMIDIFIER_PIN = 6;
 float temperature = 0;
 float humidity = 0;
 bool isNeedSendMeasurments = false;
+
+static const int CLOCK_DOTS_PIN = 8;
+unsigned long nextDotsSwitch = 0;
+bool dotsState = false;
 
 void setup() 
 {
@@ -283,16 +286,42 @@ void SetNewDynamicIndicationDelayFromRecievedCommand()
   to_flick = ReceivedValue;
 }
 
+void SwitchClockDots()
+{
+  long curTime = millis();
+
+  if(curTime >= nextDotsSwitch)
+  {
+    nextDotsSwitch = curTime + 1000;
+
+    dotsState = dotsState == true ? false : true;
+    if(dotsState) digitalWrite(CLOCK_DOTS_PIN, HIGH);
+    else digitalWrite(CLOCK_DOTS_PIN, LOW);
+  }
+}
+
+void OffClockDots()
+{
+  dotsState = false;
+  digitalWrite(CLOCK_DOTS_PIN, LOW);
+}
+
 void ExecuteMode(int curMode, int prevMode, bool isMeasured)
 {
   switch(curMode) 
   {
     case 0:
-      if(!isTimeActive) ChangeMode();
+      if(!isTimeActive)
+      {
+        ChangeMode();
+        OffClockDots();
+      } 
       else
       {
         SetTimeToShow(Hour, Minute);
+        SwitchClockDots();
         TryChangeMode(TimeShowTime);
+        if(isModeChanged) OffClockDots();
         break;
       }
 
